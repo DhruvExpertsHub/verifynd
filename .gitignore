@@ -1,0 +1,17 @@
+# Scan output (never commit reports: they can contain code snippets)
+*.sarif
+security-report.html
+security-report.md
+reports/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Editors and OS clutter
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
