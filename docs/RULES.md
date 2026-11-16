@@ -5,8 +5,9 @@ the mistake looks like, what the safe version looks like, how a rule can
 find it, and why it sits where it does. A glossary of every abbreviation
 is at the end.
 
-> **Status: planned.** No rule is written yet. The **Status** column will
-> move to *Written* and then *Tested* as each rule lands with its test file.
+> **Status:** family #11 is written and tested; the rest are planned. The
+> **Status** column moves to *Written* and then *Tested* as each rule lands
+> with its test file.
 
 ## How this list was ranked
 
@@ -61,7 +62,7 @@ entry below is rated with that limit in mind.
 | 8 | Privilege from the browser: role in the form, `extract($_POST)` | 2 | ERROR | Taint + pattern | Medium–high | `extract` only | Planned |
 | 9 | IDOR: trusting `user_id` / `student_id` from the request | 2 | WARNING | Audit | Low–medium | **None** | Planned |
 | 10 | Weak password storage and loose comparison | 2 | ERROR / WARNING | Pattern | High (name-scoped) | Partial, noisy | Planned |
-| 11 | Database errors and debug output shown to visitors | 2 | WARNING | Pattern | Very high | `phpinfo` only | Planned |
+| 11 | Database errors and debug output shown to visitors | 2 | WARNING | Taint + pattern | Very high | `phpinfo` only | **Tested** |
 | 12 | File paths and URLs from input (traversal, SSRF) | 2 | ERROR | Taint | High | Partial | Planned |
 | 13 | Scores, prices and amounts decided by the browser | 2 | WARNING | Audit | Low–medium | **None** | Planned |
 | 14 | `innerHTML` set from fetched data (JavaScript) | 3 | WARNING | Pattern | Medium | Not checked | Planned |
@@ -304,8 +305,28 @@ data was found for weak hashing.
 **Safe version:** `error_log(...)` on the server, a plain message for the
 visitor, `display_errors` off on the live site.
 
-**How the rule finds it:** patterns. Very high reliability: the best first
-rule to build.
+**How the rule finds it:** in [`rules/php/error-disclosure.yaml`](../rules/php/error-disclosure.yaml),
+tested by [`error-disclosure.php`](../rules/php/error-disclosure.php):
+
+- `db-error-shown-to-visitor` (taint): follows `mysqli_error()`,
+  `mysqli_connect_error()`, `mysqli_stmt_error()` and `$conn->error`-style
+  properties through variables to `echo`, `die`, `exit`, `print`, `printf`.
+- `exception-message-shown-to-visitor` (taint): the same for
+  `$e->getMessage()` inside a `catch`.
+- `display-errors-enabled` (pattern): `ini_set('display_errors', 1)` and
+  similar fixed values.
+- `phpinfo-left-in-code` (pattern).
+
+Following the text through variables matters: most real leaks take two
+steps (`$msg = 'Error: ' . $e->getMessage();` then `echo $msg;`). On
+EduAdapt before its fixes, the rules found all 9 leaking endpoints (8
+confirmed, 1 already limited to the developer's machine); on the fixed
+code they find none.
+
+**Known limits:** a database object with an unusual name (not like
+`$conn`, `$db`, `$mysqli`, `$stmt`) is not recognised; printing inside a
+helper defined in another file is not seen; PDO's `errorInfo()` is not yet
+covered.
 
 **Why:** a leaked SQL error turns a blind injection into one that prints
 its own results. Security misconfiguration is OWASP's #2 for 2025

@@ -6,6 +6,20 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### 2026-11-16 — First rules: errors shown to visitors (family #11)
+
+**Added**
+- `rules/php/error-disclosure.yaml`: four rules. Two taint rules follow
+  database error text (`mysqli_error()`, `$conn->error`) and caught
+  exception messages through variables to `echo`, `die`, `exit` and
+  `print`; two pattern rules flag `display_errors` switched on and
+  `phpinfo()` left in.
+- `rules/php/error-disclosure.php`: 20 test cases (14 must be flagged,
+  6 must not), including common tutorial lines.
+
+**Changed**
+- `docs/RULES.md`: family #11 marked Tested.
+
 ### 2026-11-16 — Research-backed rule catalogue
 
 **Added**

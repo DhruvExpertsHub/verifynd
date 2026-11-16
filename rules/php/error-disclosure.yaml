@@ -1,0 +1,121 @@
+# ------------------------------------------------------------------
+#  verifynd rule family #11: errors and debug output shown to visitors
+#  See docs/RULES.md#11-database-errors-and-debug-output-shown-to-visitors
+# ------------------------------------------------------------------
+rules:
+  - id: db-error-shown-to-visitor
+    languages: [php]
+    severity: WARNING
+    mode: taint
+    message: >-
+      A database error is sent to the visitor's browser. Error text can reveal
+      table names, column names and the failing SQL, which helps an attacker
+      shape an SQL injection. Write the details to the server log with
+      error_log() and show the visitor a plain message such as "Something went
+      wrong. Please try again."
+    metadata:
+      category: security
+      cwe: ["CWE-209: Generation of Error Message Containing Sensitive Information"]
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: MEDIUM
+      verifynd-family: 11
+      references:
+        - https://cwe.mitre.org/data/definitions/209.html
+        - https://www.php.net/manual/en/function.error-log.php
+    # Where the error text comes from...
+    pattern-sources:
+      - pattern: mysqli_error(...)
+      - pattern: mysqli_connect_error()
+      - pattern: mysqli_stmt_error(...)
+      - patterns:
+          - pattern-either:
+              - pattern: $DB->error
+              - pattern: $DB->connect_error
+          # only objects named like a database connection or statement
+          - metavariable-regex:
+              metavariable: $DB
+              regex: (?i)^\$(conn|con|cn|db|dbh|link|mysqli|mysql|database|sql|stmt|st|query|result|res)\w*$
+    # ...and the places that print it to the visitor.
+    pattern-sinks:
+      - pattern: die(...)
+      - pattern: exit(...)
+      - pattern: echo ...;
+      - pattern: print(...)
+      - pattern: printf(...)
+
+  - id: exception-message-shown-to-visitor
+    languages: [php]
+    severity: WARNING
+    mode: taint
+    message: >-
+      The text of a caught error is sent to the visitor's browser. For database
+      errors it often contains table names or the failing SQL. Log it with
+      error_log($e->getMessage()) and show the visitor a plain message instead.
+    metadata:
+      category: security
+      cwe: ["CWE-209: Generation of Error Message Containing Sensitive Information"]
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: MEDIUM
+      verifynd-family: 11
+      references:
+        - https://cwe.mitre.org/data/definitions/209.html
+    pattern-sources:
+      - patterns:
+          - pattern-inside: |
+              try { ... } catch ($TYPE $E) { ... }
+          - metavariable-regex:
+              metavariable: $TYPE
+              regex: ^\\?(PDOException|mysqli_sql_exception|Exception|Throwable|Error)$
+          - pattern: $E->getMessage()
+    pattern-sinks:
+      - pattern: die(...)
+      - pattern: exit(...)
+      - pattern: echo ...;
+      - pattern: print(...)
+      - pattern: printf(...)
+
+  - id: display-errors-enabled
+    languages: [php]
+    severity: WARNING
+    message: >-
+      display_errors is switched on in code, so PHP prints its error messages,
+      file paths and line numbers into the page for every visitor. Leave it off
+      on the live site and send errors to the log (log_errors = On). If you need
+      it while developing, switch it on only for your own machine.
+    metadata:
+      category: security
+      cwe: ["CWE-209: Generation of Error Message Containing Sensitive Information"]
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: LOW
+      verifynd-family: 11
+      references:
+        - https://www.php.net/manual/en/errorfunc.configuration.php#ini.display-errors
+    patterns:
+      - pattern: ini_set($NAME, $VALUE)
+      - metavariable-regex:
+          metavariable: $NAME
+          regex: ^['"]display_errors['"]$
+      - metavariable-regex:
+          metavariable: $VALUE
+          regex: (?i)^(1|true|['"](1|on|true|yes|stdout)['"])$
+
+  - id: phpinfo-left-in-code
+    languages: [php]
+    severity: WARNING
+    message: >-
+      phpinfo() prints the server's full configuration: PHP version, loaded
+      extensions, file paths and environment variables. Attackers use it to
+      plan their next step. Remove it before the site goes live.
+    metadata:
+      category: security
+      cwe: ["CWE-200: Exposure of Sensitive Information to an Unauthorized Actor"]
+      confidence: HIGH
+      likelihood: LOW
+      impact: MEDIUM
+      verifynd-family: 11
+      references:
+        - https://www.php.net/manual/en/function.phpinfo.php
+    pattern: phpinfo(...)
