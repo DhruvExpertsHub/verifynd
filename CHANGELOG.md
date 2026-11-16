@@ -6,6 +6,15 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### 2026-11-16 — Research-backed rule catalogue
+
+**Added**
+- `docs/RULES.md`: the catalogue of 19 rule families in priority order,
+  ranked by how common each flaw is in tutorial-style PHP, how often it
+  is exploited, and how reliably a rule can catch it. Each entry has the
+  vulnerable and safe code, the detection approach and its sources, plus
+  a manual checklist for what rules cannot see.
+
 ### 2026-11-03 — Project set up
 
 **Added**
